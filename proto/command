@@ -1,0 +1,1 @@
+pyrobuf --install --package yuNet --proto3 proto/yuNetMessage.proto
