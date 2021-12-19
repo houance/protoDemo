@@ -22,15 +22,3 @@ class Wrapper:
         header.length = len(data)
 
         socketWriter.write(header.SerializeToString() + data)
-        # Wrapper.sendAll(header.SerializeToString() + data, socketWriter)
-
-    @staticmethod
-    def sendAll(data:bytes, socketWriter:BytesIO):
-        data = memoryview(data)
-
-        remain = socketWriter.write(data)
-        while remain:
-            data = data[remain:]
-            remain = socketWriter(data)
-
-        socketWriter.flush()

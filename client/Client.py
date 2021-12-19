@@ -18,6 +18,7 @@ class Client:
         self.response = Response()
         
     def send(self, frame):
+        frame = NetTransfer.resize(frame)
         jpg = NetTransfer.encodeFrame(frame)
 
         self.request.encodeJpg = jpg

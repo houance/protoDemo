@@ -1,5 +1,4 @@
 from io import BytesIO
-from utils.NetTransfer import NetTransfer
 from yuNet import Header, Request, Response
 
 
