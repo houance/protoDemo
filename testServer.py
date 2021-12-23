@@ -19,7 +19,8 @@ if __name__ == "__main__":
     parser.add_argument('--path',
                         type=str,
                         help='onnx path',
-                        required=True)
+                        required=False,
+                        default='./model/YuFaceDetectNet.onnx')
 
     args = parser.parse_args()
 

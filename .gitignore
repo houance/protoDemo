@@ -3,3 +3,5 @@
 /out
 /yuNet.egg-info
 /testCV.py
+/pic.jpg
+*pycache*

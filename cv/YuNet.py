@@ -3,7 +3,7 @@ import numpy as np
 
 
 class YuNet:
-    def __init__(self, path='/home/protobufDemo/model/YuFaceDetectNet.onnx'):
+    def __init__(self, path='./model/YuFaceDetectNet.onnx'):
         self.yuNet = cv2.FaceDetectorYN.create(
             model=path,
             config='',

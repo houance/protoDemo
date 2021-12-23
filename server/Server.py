@@ -22,12 +22,14 @@ class Handler(socketserver.StreamRequestHandler):
                 BinaryFramer.recvHeader(header, self.rfile)
             except:
                 BinaryFramer.sendErrorHeader(header, self.wfile)
+                print('empty header')
                 continue
 
             try:
                 BinaryFramer.recvRequest(header, request, self.rfile)
             except:
                 BinaryFramer.sendErrorHeader(header, self.wfile, False)
+                print("wrong request")
                 continue
 
             frame = NetTransfer.decodeFrame(request.encodeJpg)
