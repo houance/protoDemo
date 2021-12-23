@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package YuNetServer;
 
-// 8bytes with 2 string bytes in python = 10bytes
+// 8bytes with 2 string bytes in python string = 10 bytes
 message Header{
   fixed32 streamID = 1;
   fixed32 length = 2;

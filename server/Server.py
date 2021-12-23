@@ -1,6 +1,6 @@
 from typing import Callable
 from utils.NetTransfer import NetTransfer
-from server.BianryFramer import Wrapper
+from server.BinaryFramer import BinaryFramer
 from cv.YuNet import YuNet
 from yuNet import Header, Request, Response
 import socketserver
@@ -18,13 +18,21 @@ class Handler(socketserver.StreamRequestHandler):
         request = Request()
         response = Response()
         while True:
-            Wrapper.recvHeader(header, self.rfile)
-            Wrapper.recvRequest(header, request, self.rfile)
+            try:
+                BinaryFramer.recvHeader(header, self.rfile)
+            except:
+                BinaryFramer.sendErrorHeader(header, self.wfile)
+                continue
+
+            try:
+                BinaryFramer.recvRequest(header, request, self.rfile)
+            except:
+                BinaryFramer.sendErrorHeader(header, self.wfile, False)
+                continue
 
             frame = NetTransfer.decodeFrame(request.encodeJpg)
             result = predictor.predict(frame, False)
 
-            if result is not None:
-                response.faces = result
+            response.faces = result
 
-            Wrapper.sendResponse(header, response, self.wfile)
+            BinaryFramer.sendResponse(header, response, self.wfile)

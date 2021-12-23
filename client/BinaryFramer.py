@@ -2,7 +2,7 @@ from io import BytesIO
 from yuNet import Header, Request, Response
 
 
-class Wrapper:
+class BinaryFramer:
     @staticmethod
     def recvHeader(header:Header, socketReader:BytesIO):
         data = socketReader.read(10)
@@ -11,8 +11,6 @@ class Wrapper:
 
     @staticmethod
     def recvResponse(header:Header, response:Response, socketReader:BytesIO):
-        Wrapper.recvHeader(header, socketReader)
-
         data = socketReader.read(int(header.length))
 
         return response.ParseFromString(data)

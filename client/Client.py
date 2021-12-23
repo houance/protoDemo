@@ -1,6 +1,6 @@
 import socket
 from utils.NetTransfer import NetTransfer
-from client.BinaryFramer import Wrapper
+from client.BinaryFramer import BinaryFramer
 from yuNet import Header, Request, Response
 
 
@@ -23,8 +23,16 @@ class Client:
 
         self.request.encodeJpg = jpg
 
-        Wrapper.sendRequest(self.header, self.request, self.writer)
+        BinaryFramer.sendRequest(self.header, self.request, self.writer)
 
-        Wrapper.recvResponse(self.header, self.response, self.reader)
+        BinaryFramer.recvHeader(self.header, self.reader)
+        if self.header.streamID == 0:
+            print("server side encounter error")
+            return
+        elif self.header.length == 0:
+            print("wrong frame data formate")
+            return
+
+        BinaryFramer.recvResponse(self.header, self.response, self.reader)
 
         return NetTransfer.decodeYuNetPredictServerResult(self.response.faces)
