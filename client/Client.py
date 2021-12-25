@@ -12,6 +12,8 @@ class Client:
         self.writer = client.makefile('wb')
 
         self.header = Header()
+        if streamID <= 0 or streamID >= 4294967295:
+            raise ValueError("StreamID Must Greater Than Zero and Smaller than 2^32 -1")
         self.header.streamID = streamID
 
         self.request = Request()
@@ -26,12 +28,6 @@ class Client:
         BinaryFramer.sendRequest(self.header, self.request, self.writer)
 
         BinaryFramer.recvHeader(self.header, self.reader)
-        if self.header.streamID == 0:
-            print("server side encounter error")
-            return
-        elif self.header.length == 0:
-            print("wrong frame data formate")
-            return
 
         BinaryFramer.recvResponse(self.header, self.response, self.reader)
 

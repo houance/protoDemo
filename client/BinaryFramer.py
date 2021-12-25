@@ -20,5 +20,7 @@ class BinaryFramer:
         data = request.SerializeToString()
 
         header.length = len(data)
+        if header.length <= 0 or header.length > 4294967295:
+            raise ValueError("Request's Length Must Greater Than Zero and Smaller than 2^32 -1")
 
         socketWriter.write(header.SerializeToString() + data)
