@@ -15,9 +15,7 @@ class YuNet:
             target_id=cv2.dnn.DNN_TARGET_CPU
         )
 
-    def predict(self, frame, local=True) -> list:
-        cv2.resize(frame, dsize=(640, 480))
-
+    def predict(self, frame, local=False) -> list:
         _, faces = self.yuNet.detect(frame)
 
         if faces is None:
