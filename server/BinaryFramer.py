@@ -20,13 +20,10 @@ class BinaryFramer:
         data = response.SerializeToString()
 
         header.length = len(data)
-
+        if header.length <= 0 or header.length > 4294967295:
+            raise ValueError("Response's Length Must Greater Than Zero and Smaller than 2^32 -1")
         socketWriter.write(header.SerializeToString() + data)
 
     @staticmethod
-    def sendErrorHeader(header:Header, socketWriter:BinaryIO, setStreamID=True):
-        if setStreamID:
-            header.streamID = 0
-        header.length = 0
-
+    def sendHeader(header:Header, socketWriter:BinaryIO):
         socketWriter.write(header.SerializeToString())
