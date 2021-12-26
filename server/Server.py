@@ -10,6 +10,7 @@ from queue import Empty, Queue
 import time
 from threading import Thread
 from utils.YuNetErrorHandle import YuNetErrorHandle as errorHandler
+from utils.DynamicQueue import DynamicQueue
 
 
 class Server(socketserver.TCPServer):
@@ -28,18 +29,15 @@ class Handler(socketserver.StreamRequestHandler):
             self.nonThreadedHandle()
 
 
-    def recvThread(self, dataQueue:Queue, cycleQueue:Queue):
+    def recvThread(self, headerQueue:Queue, requestQueue:Queue, headerCycleQueue:DynamicQueue, requestCycleQueue:DynamicQueue):
         while True:
             if (self.rfile.readable):
-                header = errorHandler.emptyCycleQueueErrorHeader(
-                    lambda: cycleQueue.get_nowait()
-                )
 
+                header = headerCycleQueue.get()
 
                 err = errorHandler.recvHeaderError(
                     lambda: BinaryFramer.recvHeader(header, self.rfile),
                     self.server.logger)
-
                 if err:
                     self.encounterError = True
                     return
@@ -54,14 +52,10 @@ class Handler(socketserver.StreamRequestHandler):
                     if err:
                         self.encounterError = True
                         return
-
+                    headerCycleQueue.put(header)
                     continue
 
-                try:
-                    request = cycleQueue.get_nowait()
-                except Empty:
-                    self.server.logger.warning('Empty CycleQueue', exc_info=True)
-                    request = Request
+                request = requestCycleQueue.get()
 
                 err = errorHandler.recvRequestError(
                     lambda: BinaryFramer.recvRequest(header, request, self.rfile),
@@ -71,29 +65,37 @@ class Handler(socketserver.StreamRequestHandler):
                     self.encounterError = True
                     return
 
-                dataQueue.put_nowait(header)
-                dataQueue.put_nowait(request)
+                headerQueue.put_nowait(header)
+                requestQueue.put_nowait(request)
             else:
                 time.sleep(0.001)
 
 
     def threadedHandle(self):
-        dataQueue = Queue(0)
+        headerQueue = Queue(0)
+        requestQueue = Queue(0)
+        headerCycleQueue = DynamicQueue(20, lambda: Header(), self.server.logger)
+        requestCycleQueue = DynamicQueue(20, lambda: Request(), self.server.logger)
         predictor = YuNet(self.server.path)
+        response = Response()
 
-        recvThread = Thread(target=self.recvThread, args=(dataQueue,), daemon=True)
-        recvThread.start()
+        Thread(
+            target=self.recvThread, 
+            args=(headerQueue, requestQueue, headerCycleQueue, requestCycleQueue), 
+            daemon=True,
+            name='Receive-Decoed-Thread').start()
 
         while not self.encounterError:
-            if dataQueue.qsize() != 0:
+            if headerQueue.qsize() != 0:
                 try:
-                    header = dataQueue.get_nowait()
+                    header = headerQueue.get_nowait()
                 except Empty:
                     continue
 
+
                 while not self.encounterError:
                     try:
-                        request = dataQueue.get_nowait()
+                        request = requestQueue.get_nowait()
                     except Empty:
                         continue
                     
@@ -102,20 +104,22 @@ class Handler(socketserver.StreamRequestHandler):
                     
                     frame = NetTransfer.decodeFrame(request.encodeJpg)
                     result = predictor.predict(frame)
-
-                    response = Response()
                     response.faces = result
 
                     err = errorHandler.sendResponseError(
                         lambda: BinaryFramer.sendResponse(header, response, self.wfile),
                         self.server.logger
                     )
-                    if err:return
-                    else: break
+                    if err:
+                        return
+                    else:
+                        headerQueue.put(header)
+                        requestQueue.put(request)
+
             else:
                 time.sleep(0.001)        
 
-    
+
     def nonThreadedHandle(self):
         predictor = YuNet(self.server.path)
         header = Header()
