@@ -68,7 +68,7 @@ class Handler(socketserver.StreamRequestHandler):
                 headerQueue.put_nowait(header)
                 requestQueue.put_nowait(request)
             else:
-                time.sleep(0.001)
+                time.sleep(0.02)
 
 
     def threadedHandle(self):
@@ -117,7 +117,7 @@ class Handler(socketserver.StreamRequestHandler):
                         requestQueue.put(request)
 
             else:
-                time.sleep(0.001)        
+                time.sleep(0.02)        
 
 
     def nonThreadedHandle(self):
