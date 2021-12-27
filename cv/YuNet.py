@@ -10,7 +10,7 @@ class YuNet:
             input_size=(640, 480),
             score_threshold=0.5,
             nms_threshold=0.3,
-            top_k=20,
+            top_k=10,
             backend_id=cv2.dnn.DNN_BACKEND_OPENCV,
             target_id=cv2.dnn.DNN_TARGET_CPU
         )

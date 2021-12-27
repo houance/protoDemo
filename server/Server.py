@@ -34,7 +34,6 @@ class Handler(socketserver.StreamRequestHandler):
             if (self.rfile.readable):
 
                 header = headerCycleQueue.get()
-
                 err = errorHandler.recvHeaderError(
                     lambda: BinaryFramer.recvHeader(header, self.rfile),
                     self.server.logger)
