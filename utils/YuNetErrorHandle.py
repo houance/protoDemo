@@ -1,21 +1,20 @@
-from queue import Empty
 from types import LambdaType
-from yuNet import DecodeError, Header, Request, Response
+from yuNet import DecodeError
 import logging
 
 
 class YuNetErrorHandle:
     @staticmethod
-    def recvHeaderError(func, logger:logging.Logger) -> bool:
+    def recvHeaderError(func:LambdaType, logger:logging.Logger) -> bool:
         try:
             func()
         except (DecodeError, OSError) as e:
             logger.error('Error Happen While Receive Header', exc_info=True)
             return True
         return False
-    
+
     @staticmethod
-    def recvRequestError(func, logger:logging.Logger) -> bool:
+    def recvRequestError(func:LambdaType, logger:logging.Logger) -> bool:
         try:
             func()
         except DecodeError as e:
@@ -27,7 +26,7 @@ class YuNetErrorHandle:
         return False
 
     @staticmethod
-    def sendResponseError(func, logger:logging.Logger) -> bool:
+    def sendResponseError(func:LambdaType, logger:logging.Logger) -> bool:
         try:
             func()
         except OSError:

@@ -14,7 +14,14 @@ from utils.DynamicQueue import DynamicQueue
 
 
 class Server(socketserver.TCPServer):
-    def __init__(self, server_address: tuple, RequestHandlerClass: Callable[..., socketserver.BaseRequestHandler],  path:str, logger:logging.Logger, threadedHandle: bool = True, bind_and_activate: bool = True,) -> None:
+    def __init__(
+        self, 
+        server_address: tuple, 
+        RequestHandlerClass: Callable[..., socketserver.BaseRequestHandler], 
+        path:str, 
+        logger:logging.Logger, 
+        threadedHandle: bool = True, 
+        bind_and_activate: bool = True) -> None:
         super().__init__(server_address, RequestHandlerClass, bind_and_activate=bind_and_activate)
         self.path = path
         self.threaded = threadedHandle
@@ -66,6 +73,7 @@ class Handler(socketserver.StreamRequestHandler):
 
                 headerQueue.put_nowait(header)
                 requestQueue.put_nowait(request)
+
             else:
                 time.sleep(0.02)
 
@@ -73,8 +81,8 @@ class Handler(socketserver.StreamRequestHandler):
     def threadedHandle(self):
         headerQueue = Queue(0)
         requestQueue = Queue(0)
-        headerCycleQueue = DynamicQueue(20, lambda: Header(), self.server.logger)
-        requestCycleQueue = DynamicQueue(20, lambda: Request(), self.server.logger)
+        headerCycleQueue = DynamicQueue(10, lambda: Header(), self.server.logger)
+        requestCycleQueue = DynamicQueue(10, lambda: Request(), self.server.logger)
         predictor = YuNet(self.server.path)
         response = Response()
 
@@ -97,10 +105,10 @@ class Handler(socketserver.StreamRequestHandler):
                         request = requestQueue.get_nowait()
                     except Empty:
                         continue
-                    
+
                     if (request.encodeJpg is None):
                         continue
-                    
+
                     frame = NetTransfer.decodeFrame(request.encodeJpg)
                     result = predictor.predict(frame)
                     response.faces = result
@@ -114,9 +122,8 @@ class Handler(socketserver.StreamRequestHandler):
                     else:
                         headerQueue.put(header)
                         requestQueue.put(request)
-
             else:
-                time.sleep(0.02)        
+                time.sleep(0.02)
 
 
     def nonThreadedHandle(self):
