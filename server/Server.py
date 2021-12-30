@@ -11,6 +11,7 @@ import time
 from threading import Thread
 from utils.YuNetErrorHandle import YuNetErrorHandle as errorHandler
 from utils.DynamicQueue import DynamicQueue
+from utils.Common import Common
 
 
 class Server(socketserver.TCPServer):
@@ -38,9 +39,9 @@ class Handler(socketserver.StreamRequestHandler):
 
     def recvThread(self, headerQueue:Queue, requestQueue:Queue, headerCycleQueue:DynamicQueue, requestCycleQueue:DynamicQueue):
         while True:
-            if (self.rfile.readable):
-
+            if self.rfile.readable():
                 header = headerCycleQueue.get()
+                
                 err = errorHandler.recvHeaderError(
                     lambda: BinaryFramer.recvHeader(header, self.rfile),
                     self.server.logger)
@@ -58,8 +59,10 @@ class Handler(socketserver.StreamRequestHandler):
                     if err:
                         self.encounterError = True
                         return
-                    headerCycleQueue.put(header)
-                    continue
+
+                    else :
+                        headerCycleQueue.put(header)
+                        continue
 
                 request = requestCycleQueue.get()
 
@@ -101,6 +104,8 @@ class Handler(socketserver.StreamRequestHandler):
 
 
                 while not self.encounterError:
+                    if requestQueue.qsize() == 0:
+                        continue
                     try:
                         request = requestQueue.get_nowait()
                     except Empty:
@@ -120,8 +125,8 @@ class Handler(socketserver.StreamRequestHandler):
                     if err:
                         return
                     else:
-                        headerQueue.put(header)
-                        requestQueue.put(request)
+                        headerCycleQueue.put(header)
+                        requestCycleQueue.put(request)
             else:
                 time.sleep(0.02)
 

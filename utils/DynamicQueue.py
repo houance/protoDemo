@@ -14,10 +14,10 @@ class DynamicQueue:
 
     def get(self):
         try:
-            item = self.queue.get_nowait()
+            item = self.queue.get(True)
         except Empty:
             item = self.func()
-            self.maxSizeThreshold = int(self.maxSizeThreshold * 0.5) + 1
+            self.maxSizeThreshold = int(self.maxSizeThreshold * 1.5) + 1
             self.spareSize = int(self.maxSizeThreshold*0.8)
             self.logger.warning('Empty CycleQueue, Expand Size to %d ', self.maxSizeThreshold,  exc_info=True)
         finally:
@@ -31,4 +31,5 @@ class DynamicQueue:
 
     def initQueue(self):
         for _ in range(0, self.maxSizeThreshold):
-            self.queue.put_nowait(self.func())
+            item = self.func()
+            self.queue.put(item)

@@ -34,7 +34,12 @@ if __name__ == "__main__":
     consoleHandler.setLevel(logging.ERROR)
     consoleHandler.setFormatter(formatter)
 
+    logToFileHandler = logging.FileHandler('app.log')
+    logToFileHandler.setLevel(logging.INFO)
+    logToFileHandler.setFormatter(formatter)
+
     logger.addHandler(consoleHandler)
+    logger.addHandler(logToFileHandler)
 
     with Server((args.address, args.port), Handler, args.path, logger, True) as server:
         server.serve_forever()
