@@ -1,21 +1,28 @@
 import logging
-from queue import Empty, Queue
 from types import LambdaType
+from collections import deque
 
 
-class DynamicQueue:
+class CycleQueue:
     def __init__(self, maxSizeThreshold:int, funcNew:LambdaType, logger:logging.Logger) -> None:
-        self.queue = Queue(0)
+        self.newQueue = deque()
+        self.manipulatedQueue = deque()
         self.maxSizeThreshold = maxSizeThreshold
         self.spareSize = int(maxSizeThreshold*0.8)
         self.func = funcNew
         self.initQueue()
         self.logger = logger
 
-    def get(self):
+    
+    def getManipulatedItem(self):
+        while not len(self.manipulatedQueue):
+            continue
+        return self.manipulatedQueue.popleft()
+
+    def getNewItem(self):
         try:
-            item = self.queue.get(True)
-        except Empty:
+            item = self.newQueue.popleft()
+        except IndexError:
             item = self.func()
             self.maxSizeThreshold = int(self.maxSizeThreshold * 1.5) + 1
             self.spareSize = int(self.maxSizeThreshold*0.8)
@@ -23,13 +30,16 @@ class DynamicQueue:
         finally:
             return item
 
-    def put(self, item):
-        if self.queue.qsize() >= self.spareSize:
+    def putIntoNewQueue(self, item):
+        if len(self.newQueue) >= self.spareSize:
             return
         else:
-            self.queue.put_nowait(item)
+            self.newQueue.append(item)
+
+    def putIntoManipulatedQueue(self, item):
+        self.manipulatedQueue.append(item)
 
     def initQueue(self):
         for _ in range(0, self.maxSizeThreshold):
             item = self.func()
-            self.queue.put(item)
+            self.newQueue.append(item)

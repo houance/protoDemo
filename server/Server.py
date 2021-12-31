@@ -1,17 +1,15 @@
 import logging
 from typing import Callable
-from proto.YuNetMessageType import YuNetMessageType as message
+from proto.YuNetMessageType import HeaderRequest as combine
 from utils.NetTransfer import NetTransfer
 from server.BinaryFramer import BinaryFramer
 from cv.YuNet import YuNet
 from yuNet import Header, Request, Response
 import socketserver
-from queue import Empty, Queue
 import time
-from threading import Thread
+from threading import Thread, Event
 from utils.YuNetErrorHandle import YuNetErrorHandle as errorHandler
-from utils.DynamicQueue import DynamicQueue
-from utils.Common import Common
+from utils.DynamicQueue import CycleQueue
 
 
 class Server(socketserver.TCPServer):
@@ -37,98 +35,81 @@ class Handler(socketserver.StreamRequestHandler):
             self.nonThreadedHandle()
 
 
-    def recvThread(self, headerQueue:Queue, requestQueue:Queue, headerCycleQueue:DynamicQueue, requestCycleQueue:DynamicQueue):
+    def recvThread(self, cycleQueue:CycleQueue, eventReceived:Event, eventError:Event):
         while True:
             if self.rfile.readable():
-                header = headerCycleQueue.get()
-                
+                item = cycleQueue.getNewItem()
+
                 err = errorHandler.recvHeaderError(
-                    lambda: BinaryFramer.recvHeader(header, self.rfile),
+                    lambda: BinaryFramer.recvHeader(item.header, self.rfile),
                     self.server.logger)
                 if err:
-                    self.encounterError = True
+                    eventError.set()
+                    eventReceived.set()
                     return
 
-                if message.isPingHeader(header):
-                    message.ping(header)
+                # enum logic define in message
+                # implement here to increae speed
+                # becase python calling function is expensive
+                if item.header.streamID == 0 and item.header.length == 1:
 
                     err = errorHandler.sendHeaderError(
-                        lambda: BinaryFramer.sendHeader(header, self.wfile),
+                        lambda: BinaryFramer.sendHeader(item.header, self.wfile),
                         self.server.logger
                     )
                     if err:
-                        self.encounterError = True
+                        eventError.set()
+                        eventReceived.set()
                         return
-
                     else :
-                        headerCycleQueue.put(header)
+                        cycleQueue.putIntoNewQueue(item)
                         continue
 
-                request = requestCycleQueue.get()
-
                 err = errorHandler.recvRequestError(
-                    lambda: BinaryFramer.recvRequest(header, request, self.rfile),
+                    lambda: BinaryFramer.recvRequest(item.header, item.request, self.rfile),
                     self.server.logger
                 )
                 if err:
-                    self.encounterError = True
+                    eventError.set()
+                    eventReceived.set()
                     return
-
-                headerQueue.put_nowait(header)
-                requestQueue.put_nowait(request)
-
+                else:
+                    cycleQueue.putIntoManipulatedQueue(item)
+                    eventReceived.set()
             else:
                 time.sleep(0.02)
 
 
     def threadedHandle(self):
-        headerQueue = Queue(0)
-        requestQueue = Queue(0)
-        headerCycleQueue = DynamicQueue(10, lambda: Header(), self.server.logger)
-        requestCycleQueue = DynamicQueue(10, lambda: Request(), self.server.logger)
+        cycleQueue = CycleQueue(10, lambda:combine(Header(), Request()), self.server.logger)
         predictor = YuNet(self.server.path)
         response = Response()
+        eventReceived = Event()
+        eventError = Event()
 
         Thread(
             target=self.recvThread, 
-            args=(headerQueue, requestQueue, headerCycleQueue, requestCycleQueue), 
+            args=(cycleQueue, eventReceived, eventError), 
             daemon=True,
             name='Receive-Decoed-Thread').start()
 
-        while not self.encounterError:
-            if headerQueue.qsize() != 0:
-                try:
-                    header = headerQueue.get_nowait()
-                except Empty:
-                    continue
+        while eventReceived.wait():
+            eventReceived.clear()
+            if not eventError.is_set():
+                item = cycleQueue.getManipulatedItem()
 
+                frame = NetTransfer.decodeFrame(item.request.encodeJpg)
+                result = predictor.predict(frame)
+                response.faces = result
 
-                while not self.encounterError:
-                    if requestQueue.qsize() == 0:
-                        continue
-                    try:
-                        request = requestQueue.get_nowait()
-                    except Empty:
-                        continue
-
-                    if (request.encodeJpg is None):
-                        continue
-
-                    frame = NetTransfer.decodeFrame(request.encodeJpg)
-                    result = predictor.predict(frame)
-                    response.faces = result
-
-                    err = errorHandler.sendResponseError(
-                        lambda: BinaryFramer.sendResponse(header, response, self.wfile),
-                        self.server.logger
-                    )
-                    if err:
-                        return
-                    else:
-                        headerCycleQueue.put(header)
-                        requestCycleQueue.put(request)
-            else:
-                time.sleep(0.02)
+                err = errorHandler.sendResponseError(
+                    lambda: BinaryFramer.sendResponse(item.header, response, self.wfile),
+                    self.server.logger
+                )
+                if err:
+                    return
+                else:
+                    cycleQueue.putIntoNewQueue(item)
 
 
     def nonThreadedHandle(self):

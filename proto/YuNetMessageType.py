@@ -1,4 +1,11 @@
-from yuNet import Header
+from yuNet import Header, Request
+
+
+class HeaderRequest:
+    def __init__(self, header:Header, request:Request) -> None:
+        self.header = header
+        self.request = request
+
 
 class YuNetMessageType:
     @staticmethod

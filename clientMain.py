@@ -8,7 +8,6 @@ if __name__ == "__main__":
     yu = YuNet()
     sumTime = 0
     count = 0
-
     while True:
         start = time.time()
         frame = cv2.imread('./pic.jpg')
