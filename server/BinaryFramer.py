@@ -6,12 +6,18 @@ class BinaryFramer:
     @staticmethod
     def recvHeader(header:Header, socketReader:BinaryIO):
         data = socketReader.read(10)
+        if len(data) == 0:
+            raise ValueError('Closed Socket File')
 
         return header.ParseFromString(data)
 
     @staticmethod
     def recvRequest(header:Header, request:Request, socketReader:BinaryIO):
-        data = socketReader.read(int(header.length))
+        length = int(header.length)
+
+        data = socketReader.read(length)
+        if len(data) != length:
+            raise ValueError('Closed Socket File')
 
         return request.ParseFromString(data)
 
