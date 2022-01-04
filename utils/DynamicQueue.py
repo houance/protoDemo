@@ -10,10 +10,10 @@ class CycleQueue:
         self.maxSizeThreshold = maxSizeThreshold
         self.spareSize = int(maxSizeThreshold*0.8)
         self.func = funcNew
-        self.initQueue()
         self.logger = logger
+        self.initQueue()
+        
 
-    
     def getManipulatedItem(self):
         while not len(self.manipulatedQueue):
             continue
@@ -26,7 +26,7 @@ class CycleQueue:
             item = self.func()
             self.maxSizeThreshold = int(self.maxSizeThreshold * 1.5) + 1
             self.spareSize = int(self.maxSizeThreshold*0.8)
-            self.logger.warning('Empty CycleQueue, Expand Size to %d ', self.maxSizeThreshold,  exc_info=True)
+            self.logger.warning('Empty CycleQueue,  Expand Size to %d ', self.maxSizeThreshold,  exc_info=True)
         finally:
             return item
 

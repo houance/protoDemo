@@ -8,10 +8,11 @@ class YuNetErrorHandle:
     def recvHeaderError(func:LambdaType, logger:logging.Logger) -> bool:
         try:
             func()
-        except (DecodeError, OSError, ValueError):
+        except:
             logger.error('Error Happen While Receive Header', exc_info=True)
             return True
-        return False
+        else: 
+            return False
 
     @staticmethod
     def recvRequestError(func:LambdaType, logger:logging.Logger) -> bool:
@@ -23,7 +24,8 @@ class YuNetErrorHandle:
         except (OSError, ValueError):
             logger.error('Error Happen While Receive Request', exc_info=True)
             return True
-        return False
+        else:
+            return False
 
     @staticmethod
     def sendResponseError(func:LambdaType, logger:logging.Logger) -> bool:
@@ -32,4 +34,5 @@ class YuNetErrorHandle:
         except (OSError, ValueError):
             logger.error('Error Happen While Send Response', exc_info=True)
             return True
-        return False
+        else:
+            return False

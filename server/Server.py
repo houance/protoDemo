@@ -1,4 +1,5 @@
 import logging
+import threading
 from typing import Callable
 from proto.YuNetMessageType import HeaderRequest as combine
 from utils.NetTransfer import NetTransfer
@@ -6,7 +7,6 @@ from server.BinaryFramer import BinaryFramer
 from cv.YuNet import YuNet
 from yuNet import Header, Request, Response
 import socketserver
-import time
 from threading import Thread, Event
 from utils.YuNetErrorHandle import YuNetErrorHandle as errorHandler
 from utils.DynamicQueue import CycleQueue
@@ -29,115 +29,82 @@ class Server(socketserver.TCPServer):
 class Handler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
         if self.server.threaded:
-            self.encounterError = False
             self.threadedHandle()
         else:
             self.nonThreadedHandle()
 
 
-    def recvThread(self, cycleQueue:CycleQueue, eventReceived:Event, eventError:Event):
-        while True:
-            if self.rfile.readable():
-                item = cycleQueue.getNewItem()
+    def computeThread(self, cycleQueue:CycleQueue, eventReceived:Event, eventError:Event):
+        predictor = YuNet(self.server.path)
+        response = Response()
+        while eventReceived.wait() and not eventError.is_set():
+            eventReceived.clear()
+            item = cycleQueue.getManipulatedItem()
 
-                err = errorHandler.recvHeaderError(
-                    lambda: BinaryFramer.recvHeader(item.header, self.rfile),
-                    self.server.logger)
-                if err:
-                    eventError.set()
-                    eventReceived.set()
-                    return
+            frame = NetTransfer.decodeFrame(item.request.encodeJpg)
+            result = predictor.predict(frame)
+            response.faces = result
 
-                # enum logic define in message
-                # implement here to increae speed
-                # becase python calling function is expensive
-                if item.header.streamID == 0 and item.header.length == 1:
-
-                    err = errorHandler.sendHeaderError(
-                        lambda: BinaryFramer.sendHeader(item.header, self.wfile),
-                        self.server.logger
-                    )
-                    if err:
-                        eventError.set()
-                        eventReceived.set()
-                        return
-                    else :
-                        cycleQueue.putIntoNewQueue(item)
-                        continue
-
-                err = errorHandler.recvRequestError(
-                    lambda: BinaryFramer.recvRequest(item.header, item.request, self.rfile),
-                    self.server.logger
-                )
-                if err:
-                    eventError.set()
-                    eventReceived.set()
-                    return
-                else:
-                    cycleQueue.putIntoManipulatedQueue(item)
-                    eventReceived.set()
+            err = errorHandler.sendResponseError(
+                lambda: BinaryFramer.sendResponse(item.header, response, self.wfile),
+                self.server.logger
+            )
+            if err:
+                eventError.set()
+                break
             else:
-                time.sleep(0.02)
-
+                cycleQueue.putIntoNewQueue(item)
+        self.server.logger.warning(
+            '{} exit'.format(threading.currentThread().getName()))
 
     def threadedHandle(self):
-        cycleQueue = CycleQueue(10, lambda:combine(Header(), Request()), self.server.logger)
-        predictor = YuNet(self.server.path)
-        response = Response()
+        cycleQueue = CycleQueue(
+            10, 
+            lambda:combine(Header(), Request()), 
+            self.server.logger)
+
         eventReceived = Event()
         eventError = Event()
-
         Thread(
-            target=self.recvThread, 
-            args=(cycleQueue, eventReceived, eventError), 
-            daemon=True,
-            name='Receive-Decoed-Thread').start()
+            target=self.computeThread, 
+            args=(cycleQueue, eventReceived, eventError),
+            name='Compute-Thread').start()
 
-        while eventReceived.wait():
-            eventReceived.clear()
-            if not eventError.is_set():
-                item = cycleQueue.getManipulatedItem()
+        while not eventError.is_set():
+            item = cycleQueue.getNewItem()
+            err = errorHandler.recvHeaderError(
+                lambda: BinaryFramer.recvHeader(item.header, self.rfile),
+                self.server.logger)
+            if err:
+                eventError.set()
+                eventReceived.set()
+                break
 
-                frame = NetTransfer.decodeFrame(item.request.encodeJpg)
-                result = predictor.predict(frame)
-                response.faces = result
+            # enum logic define in message
+            # implement here to increae speed
+            # becase python calling function is expensive
+            if item.header.streamID == 0 and item.header.length == 1:
 
-                err = errorHandler.sendResponseError(
-                    lambda: BinaryFramer.sendResponse(item.header, response, self.wfile),
+                err = errorHandler.sendHeaderError(
+                    lambda: BinaryFramer.sendHeader(item.header, self.wfile),
                     self.server.logger
                 )
                 if err:
-                    return
-                else:
+                    eventError.set()
+                    eventReceived.set()
+                    break
+                else :
                     cycleQueue.putIntoNewQueue(item)
+                    continue
 
-
-    def nonThreadedHandle(self):
-        predictor = YuNet(self.server.path)
-        header = Header()
-        request = Request()
-        response = Response()
-        while True:
-            if self.rfile.readable():
-                try:
-                    BinaryFramer.recvHeader(header, self.rfile)
-                except:
-                    BinaryFramer.sendErrorHeader(header, self.wfile)
-                    print('empty header')
-                    return
-
-                try:
-                    BinaryFramer.recvRequest(header, request, self.rfile)
-                except:
-                    BinaryFramer.sendErrorHeader(header, self.wfile, False)
-                    print("wrong request")
-                    return
-
-                frame = NetTransfer.decodeFrame(request.encodeJpg)
-                result = predictor.predict(frame, False)
-
-                response.faces = result
-
-                BinaryFramer.sendResponse(header, response, self.wfile)
+            err = errorHandler.recvRequestError(
+                lambda: BinaryFramer.recvRequest(item.header, item.request, self.rfile),
+                self.server.logger
+            )
+            if err:
+                eventError.set()
+                eventReceived.set()
+                break
             else:
-                time.sleep(0.01)
+                cycleQueue.putIntoManipulatedQueue(item)
+                eventReceived.set()
