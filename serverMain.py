@@ -31,11 +31,11 @@ if __name__ == "__main__":
     formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s")
 
     consoleHandler = logging.StreamHandler()
-    consoleHandler.setLevel(logging.ERROR)
+    consoleHandler.setLevel(logging.DEBUG)
     consoleHandler.setFormatter(formatter)
 
     logToFileHandler = logging.FileHandler('app.log')
-    logToFileHandler.setLevel(logging.INFO)
+    logToFileHandler.setLevel(logging.WARNING)
     logToFileHandler.setFormatter(formatter)
 
     logger.addHandler(consoleHandler)
