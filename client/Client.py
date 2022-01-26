@@ -32,3 +32,11 @@ class Client:
         BinaryFramer.recvResponse(self.header, self.response, self.reader)
 
         return NetTransfer.decodeYuNetPredictServerResult(self.response.faces)
+
+    def sendGolangBenchmark(self, frame):
+        frame = NetTransfer.resize(frame)
+        jpg = NetTransfer.encodeFrame(frame)
+
+        self.request.encodeJpg = jpg
+
+        BinaryFramer.sendRequest(self.header, self.request, self.writer)
