@@ -2,7 +2,7 @@ import socket
 from utils.NetTransfer import NetTransfer
 from client.BinaryFramer import BinaryFramer
 from yuNet import Header, Request, Response
-import time
+import datetime
 
 
 class Client:
@@ -16,6 +16,7 @@ class Client:
 
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((address, port))
+        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         self.reader = client.makefile('rb')
         self.writer = client.makefile('wb')
         

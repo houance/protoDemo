@@ -1,6 +1,6 @@
 import logging
 import threading
-import time
+import datetime
 from typing import Callable
 from proto.YuNetMessageType import HeaderRequest as combine
 from utils.NetTransfer import NetTransfer
@@ -28,7 +28,6 @@ class Server(socketserver.TCPServer):
         self.path = path
         self.threaded = threadedHandle
         self.logger = logger
-        self.timer = None
 
 class Handler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
