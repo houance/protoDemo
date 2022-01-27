@@ -33,6 +33,7 @@ class YuNet:
             return None
 
         for face in faces:
+
             cv2.rectangle(
                 frame,
                 (face[0], face[1]),

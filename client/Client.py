@@ -2,7 +2,7 @@ import socket
 from utils.NetTransfer import NetTransfer
 from client.BinaryFramer import BinaryFramer
 from yuNet import Header, Request, Response
-from time import sleep
+import time
 
 
 class Client:
@@ -20,6 +20,7 @@ class Client:
         self.writer = client.makefile('wb')
         
     def send(self, frame):
+        
         frame = NetTransfer.resize(frame)
         jpg = NetTransfer.encodeFrame(frame)
 

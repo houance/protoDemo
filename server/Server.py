@@ -1,5 +1,6 @@
 import logging
 import threading
+import time
 from typing import Callable
 from proto.YuNetMessageType import HeaderRequest as combine
 from utils.NetTransfer import NetTransfer
@@ -11,7 +12,9 @@ from threading import Thread, Event
 from utils.YuNetErrorHandle import YuNetErrorHandle as errorHandler
 from utils.DynamicQueue import CycleQueue
 
-
+# Server Side total cost around ~40ms
+# Socket Recv and Send, Protobuf serilize and deserilize cost below 1ms
+# Opencv Compute ~35ms
 class Server(socketserver.TCPServer):
     def __init__(
         self, 
@@ -25,6 +28,7 @@ class Server(socketserver.TCPServer):
         self.path = path
         self.threaded = threadedHandle
         self.logger = logger
+        self.timer = None
 
 class Handler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
@@ -96,7 +100,6 @@ class Handler(socketserver.StreamRequestHandler):
                 else :
                     cycleQueue.putIntoNewQueue(item)
                     continue
-
             err = errorHandler.recvRequestError(
                 lambda: BinaryFramer.recvRequest(item.header, item.request, self.rfile),
                 self.server.logger

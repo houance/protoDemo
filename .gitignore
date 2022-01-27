@@ -2,3 +2,6 @@ build
 dist
 out
 yuNet.egg-info
+app.log
+*/__pycache__
+test.py
