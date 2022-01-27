@@ -110,3 +110,5 @@ class Handler(socketserver.StreamRequestHandler):
             else:
                 cycleQueue.putIntoManipulatedQueue(item)
                 eventReceived.set()
+                self.server.logger.info(
+                    '{}'.format(datetime.datetime.now()))

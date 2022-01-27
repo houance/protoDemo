@@ -9,7 +9,7 @@ class Client:
     def __init__(self, address:str, port:int, streamID=1) -> None:
         self.header = Header()
         if streamID <= 0 or streamID >= 4294967295:
-            raise ValueError("StreamID Must Greater Than Zero and Smaller than 2^32 -1")
+            raise ValueError("StreamID Must Greater Than Zero and Smaller than 2^32 - 1")
         self.header.streamID = streamID
         self.request = Request()
         self.response = Response()
@@ -17,8 +17,9 @@ class Client:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((address, port))
         client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        self.reader = client.makefile('rb')
-        self.writer = client.makefile('wb')
+        client.settimeout(None)
+        self.reader = client.makefile('rb', -1)
+        self.writer = client
         
     def send(self, frame):
         
@@ -32,6 +33,8 @@ class Client:
         BinaryFramer.recvHeader(self.header, self.reader)
 
         BinaryFramer.recvResponse(self.header, self.response, self.reader)
+
+        # print(datetime.datetime.now())
 
         return NetTransfer.decodeYuNetPredictServerResult(self.response.faces)
 
