@@ -1,5 +1,5 @@
 from io import BytesIO
-from socket import socket
+import socket
 from yuNet import Header, Request, Response
 
 

@@ -57,6 +57,8 @@ class Handler(socketserver.StreamRequestHandler):
                 break
             else:
                 cycleQueue.putIntoNewQueue(item)
+                # self.server.logger.info(
+                #     'Send to Go Time : {}'.format(datetime.datetime.now()))
         self.server.logger.warning(
             '{} exit'.format(threading.currentThread().getName()))
 
@@ -110,5 +112,5 @@ class Handler(socketserver.StreamRequestHandler):
             else:
                 cycleQueue.putIntoManipulatedQueue(item)
                 eventReceived.set()
-                self.server.logger.info(
-                    '{}'.format(datetime.datetime.now()))
+                # self.server.logger.info(
+                #     'Recv From GO Time : {}'.format(datetime.datetime.now()))

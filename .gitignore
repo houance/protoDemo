@@ -5,3 +5,4 @@ yuNet.egg-info
 app.log
 */__pycache__
 test.py
+randomtest.py
