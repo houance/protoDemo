@@ -31,6 +31,8 @@ class Server(socketserver.TCPServer):
 
 class Handler(socketserver.StreamRequestHandler):
     def handle(self) -> None:
+        self.server.logger.info(
+            'LB Connection Established, Address {}'.format(self.client_address))
         if self.server.threaded:
             self.threadedHandle()
         else:
@@ -57,8 +59,6 @@ class Handler(socketserver.StreamRequestHandler):
                 break
             else:
                 cycleQueue.putIntoNewQueue(item)
-                # self.server.logger.info(
-                #     'Send to Go Time : {}'.format(datetime.datetime.now()))
         self.server.logger.warning(
             '{} exit'.format(threading.currentThread().getName()))
 

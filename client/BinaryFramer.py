@@ -1,6 +1,7 @@
 from io import BytesIO
 import socket
 from yuNet import Header, Request, Response
+from proto.YuNetMessageType import YuNetMessageType
 
 
 class BinaryFramer:
@@ -25,3 +26,7 @@ class BinaryFramer:
             raise ValueError("Request's Length Must Greater Than Zero and Smaller than 2^32 -1")
 
         socketWriter.sendall(header.SerializeToString() + data)
+
+    @staticmethod
+    def sendHeader(header:Header, socketWriter:socket):
+        socketWriter.sendall(header.SerializeToString())

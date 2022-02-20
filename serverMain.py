@@ -1,6 +1,7 @@
 from server.Server import Server, Handler
 from argparse import ArgumentParser
 import logging
+from utils.ConsulTool import ConsulTool
 
 
 if __name__ == "__main__":
@@ -40,6 +41,9 @@ if __name__ == "__main__":
 
     logger.addHandler(consoleHandler)
     logger.addHandler(logToFileHandler)
+    c = ConsulTool('172.17.129.202', 8500)
 
     with Server((args.address, args.port), Handler, args.path, logger, True) as server:
+        logger.info("Start Server")
+        c.registerServerService('yuNetServer', '172.30.58.167', args.port)
         server.serve_forever()
